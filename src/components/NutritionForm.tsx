@@ -15,14 +15,14 @@ const NutritionForm: React.FC<NutritionFormProps> = ({
 }) => {
   const [formData, setFormData] = useState<NutritionData>(defaultNutritionData);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // This state keeps track of which fields are being edited to allow empty values temporarily
-  const [activeFields, setActiveFields] = useState<Record<string, boolean>>({});
+  // This state tracks which fields are being edited (for future use)
+  // const [activeFields, setActiveFields] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (nutritionData) {
       setFormData(nutritionData);
       setErrors({});
-      setActiveFields({});
+      // setActiveFields({});
     }
   }, [nutritionData]);
 
@@ -44,10 +44,10 @@ const NutritionForm: React.FC<NutritionFormProps> = ({
     // For numeric fields
     if (name !== 'servingSize') {
       // Track if the field is being actively edited
-      setActiveFields(prev => ({
-        ...prev,
-        [name]: true
-      }));
+      // setActiveFields(prev => ({
+      //   ...prev,
+      //   [name]: true
+      // }));
       
       // For display in the form, always use the exact input value
       setFormData(prev => ({
@@ -116,17 +116,17 @@ const NutritionForm: React.FC<NutritionFormProps> = ({
       onNutritionChange(updatedData);
       
       // Remove from active fields
-      setActiveFields(prev => ({
-        ...prev,
-        [name]: false
-      }));
+      // setActiveFields(prev => ({
+      //   ...prev,
+      //   [name]: false
+      // }));
     }
   };
 
   const handleReset = () => {
     setFormData(defaultNutritionData);
     setErrors({});
-    setActiveFields({});
+    // setActiveFields({});
     onNutritionChange(defaultNutritionData);
   };
 

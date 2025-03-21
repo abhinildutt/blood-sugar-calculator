@@ -45,11 +45,12 @@ export interface ExtractionDebugInfo {
 /**
  * Extract numeric value from a text string
  * E.g. "Total Carbohydrates 27g" -> 27
+ * Note: Currently unused but kept for potential future use
  */
-const extractNumericValue = (text: string): number => {
-  const match = text.match(/\b(\d+(\.\d+)?)\s*g?\b/);
-  return match ? parseFloat(match[1]) : 0;
-};
+// const extractNumericValue = (text: string): number => {
+//   const match = text.match(/\b(\d+(\.\d+)?)\s*g?\b/);
+//   return match ? parseFloat(match[1]) : 0;
+// };
 
 /**
  * Process OCR text to extract nutrition information
