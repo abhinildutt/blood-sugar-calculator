@@ -24,19 +24,22 @@ let visionClient: ImageAnnotatorClient;
 
 try {
   if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
-    // For production environment where credentials are set as environment variable
+    console.log('Initializing Vision client with environment credentials');
     const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
     visionClient = new ImageAnnotatorClient({
-      credentials: credentials
+      credentials: credentials,
+      projectId: credentials.project_id
     });
   } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
-    // For local development where credentials file path is set
+    console.log('Initializing Vision client with credentials file');
     visionClient = new ImageAnnotatorClient();
   } else {
+    console.error('No Google Cloud credentials found in environment');
     throw new Error('Google Cloud credentials not found');
   }
 } catch (error) {
   console.error('Error initializing Vision client:', error);
+  // Don't throw here, we'll handle the null client in the handler
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -48,7 +51,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (!visionClient) {
-      return res.status(500).json({ error: 'Vision client not initialized' });
+      console.error('Vision client initialization error:', process.env.GOOGLE_CLOUD_CREDENTIALS ? 'Credentials found but client not initialized' : 'No credentials found');
+      return res.status(500).json({ error: 'Vision client not initialized', details: 'Check server logs for more information' });
     }
 
     const { imageData } = req.body;
@@ -61,27 +65,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const base64Image = imageData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Image, 'base64');
 
-    const [result] = await visionClient.textDetection({
-      image: { content: buffer }
-    });
+    try {
+      const [result] = await visionClient.textDetection({
+        image: { content: buffer }
+      });
 
-    const detections = result.textAnnotations;
-    
-    if (!detections || detections.length === 0) {
-      return res.status(404).json({ error: 'No text detected in image' });
+      const detections = result.textAnnotations;
+      
+      if (!detections || detections.length === 0) {
+        return res.status(404).json({ error: 'No text detected in image' });
+      }
+
+      const extractedText = detections[0].description;
+      
+      return res.status(200).json({
+        text: extractedText,
+        nutrition: {} // Placeholder for nutrition information
+      });
+    } catch (visionError) {
+      console.error('Vision API error:', visionError);
+      return res.status(500).json({ 
+        error: 'Vision API error', 
+        details: visionError.message 
+      });
     }
-
-    const extractedText = detections[0].description;
-    
-    // Here you would process the extracted text to get nutrition information
-    // For now, returning the raw text
-    return res.status(200).json({
-      text: extractedText,
-      nutrition: {} // Placeholder for nutrition information
-    });
 
   } catch (error) {
     console.error('Error processing image:', error);
-    return res.status(500).json({ error: 'Failed to process image' });
+    return res.status(500).json({ 
+      error: 'Failed to process image', 
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
   }
 } 
