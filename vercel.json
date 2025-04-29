@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo $GOOGLE_CREDENTIALS | base64 -d > google-credentials.json",
+  "buildCommand": "echo $GOOGLE_CLOUD_CREDENTIALS > google-credentials.json",
   "outputDirectory": "dist",
   "framework": "vite",
   "builds": [
@@ -39,8 +39,5 @@
       "src": "/(.*)",
       "dest": "/dist/index.html"
     }
-  ],
-  "env": {
-    "GOOGLE_APPLICATION_CREDENTIALS": "/var/task/google-credentials.json"
-  }
+  ]
 } 
