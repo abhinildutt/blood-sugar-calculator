@@ -10,8 +10,10 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "outDir": "dist",
+    "declaration": true,
+    "sourceMap": true
   },
-  "include": ["api/**/*.ts"],
+  "include": ["api/**/*.ts", "src/**/*.ts"],
   "exclude": ["node_modules"]
 } 

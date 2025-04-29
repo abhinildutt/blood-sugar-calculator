@@ -1,7 +1,7 @@
 // This file should be renamed to analyze-image.ts
-const { VercelRequest, VercelResponse } = require('@vercel/node');
-const { ImageAnnotatorClient } = require('@google-cloud/vision');
-const Cors = require('cors');
+import { VercelRequest, VercelResponse } from '@vercel/node';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
+import Cors from 'cors';
 
 const cors = Cors({
   origin: '*',
@@ -9,7 +9,7 @@ const cors = Cors({
   allowedHeaders: ['Content-Type']
 });
 
-const runMiddleware = (req: typeof VercelRequest, res: typeof VercelResponse, fn: Function) => {
+const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
       if (result instanceof Error) {
@@ -20,7 +20,7 @@ const runMiddleware = (req: typeof VercelRequest, res: typeof VercelResponse, fn
   });
 };
 
-let visionClient: typeof ImageAnnotatorClient;
+let visionClient: ImageAnnotatorClient;
 
 try {
   if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
@@ -42,7 +42,7 @@ try {
   // Don't throw here, we'll handle the null client in the handler
 }
 
-module.exports = async function handler(req: typeof VercelRequest, res: typeof VercelResponse) {
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     await runMiddleware(req, res, cors);
 
@@ -82,7 +82,7 @@ module.exports = async function handler(req: typeof VercelRequest, res: typeof V
         text: extractedText,
         nutrition: {} // Placeholder for nutrition information
       });
-    } catch (visionError) {
+    } catch (visionError: any) {
       console.error('Vision API error:', visionError);
       return res.status(500).json({ 
         error: 'Vision API error', 
@@ -90,7 +90,7 @@ module.exports = async function handler(req: typeof VercelRequest, res: typeof V
       });
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error processing image:', error);
     return res.status(500).json({ 
       error: 'Failed to process image', 

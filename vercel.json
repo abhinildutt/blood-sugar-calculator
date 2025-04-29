@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "echo $GOOGLE_CLOUD_CREDENTIALS > google-credentials.json",
+  "buildCommand": "echo $GOOGLE_CLOUD_CREDENTIALS > google-credentials.json && cd server && npm install && cd ..",
   "outputDirectory": "dist",
   "framework": "vite",
   "builds": [
