@@ -1,13 +1,19 @@
 {
   "version": 2,
+  "buildCommand": "echo $GOOGLE_CREDENTIALS | base64 -d > google-credentials.json",
+  "outputDirectory": "dist",
+  "framework": "vite",
   "builds": [
     {
       "src": "server/api/*.ts",
       "use": "@vercel/node"
     },
     {
-      "src": "dist/**",
-      "use": "@vercel/static"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
   ],
   "routes": [
@@ -16,15 +22,19 @@
       "dest": "/server/api/$1"
     },
     {
-      "handle": "filesystem"
+      "src": "^/assets/(.*)",
+      "dest": "/dist/assets/$1"
+    },
+    {
+      "src": "/(.*)\\.(.+)",
+      "dest": "/dist/$1.$2"
     },
     {
       "src": "/(.*)",
-      "dest": "/dist/$1"
+      "dest": "/dist/index.html"
     }
   ],
   "env": {
     "GOOGLE_APPLICATION_CREDENTIALS": "/var/task/google-credentials.json"
-  },
-  "buildCommand": "echo $GOOGLE_CREDENTIALS | base64 -d > google-credentials.json && npm run build"
+  }
 } 
