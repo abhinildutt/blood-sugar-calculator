@@ -4,14 +4,14 @@ const About: React.FC = () => {
   return (
     <div className="min-h-screen pb-12">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-6">About NutriGlucose</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-6">About GlycoScan</h1>
         
         <div className="bg-white shadow-md rounded-lg p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-800 mb-4">How It Works</h2>
           
           <div className="prose prose-indigo max-w-none">
             <p>
-              NutriGlucose helps you understand how the foods you eat might affect your blood sugar levels.
+              GlycoScan helps you understand how the foods you eat might affect your blood sugar levels.
               By analyzing the nutritional content of food through their nutrition labels, we provide an estimate
               of the potential blood sugar impact over time.
             </p>

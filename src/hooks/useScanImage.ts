@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { processNutritionLabel, OCRProcessingResult, ExtractionDebugInfo } from '../utils/ocrProcessor';
+import { processNutritionLabelWithGoogleVision, OCRProcessingResult, ExtractionDebugInfo } from '../utils/googleVisionProcessor';
 import { calculateBloodSugarImpact } from '../utils/bloodSugarCalculator';
 import { NutritionData, BloodSugarImpact, ScanState } from '../types';
 
@@ -44,7 +44,7 @@ export const useScanImage = (): UseScanImage => {
     setError(null);
     
     try {
-      const result = await processNutritionLabel(file) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(file) as OCRProcessingResult;
       setRawOcrText(result.rawText);
       setDebugInfo(result.debugInfo || null);
       processNutrition(result.nutritionData);
@@ -61,7 +61,7 @@ export const useScanImage = (): UseScanImage => {
     setError(null);
     
     try {
-      const result = await processNutritionLabel(url) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(url) as OCRProcessingResult;
       setRawOcrText(result.rawText);
       setDebugInfo(result.debugInfo || null);
       processNutrition(result.nutritionData);

@@ -1,24 +1,26 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import logo from '../assets/logo.png';
+import { ClipboardDocumentListIcon } from '@heroicons/react/24/solid';
 
 const Header: React.FC = () => {
   return (
     <header className="bg-indigo-600 shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-8xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center py-4">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <svg 
-                xmlns="http://www.w3.org/2000/svg" 
-                className="h-8 w-8 text-white mr-2" 
-                fill="none" 
-                viewBox="0 0 24 24" 
-                stroke="currentColor"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-              </svg>
-              <span className="text-white text-xl font-bold">NutriGlucose</span>
+              <img 
+                src={logo}
+                alt="Northwestern Logo"
+                className="h-16 w-auto mr-2"
+              />
             </Link>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <ClipboardDocumentListIcon className="h-6 w-6 text-white" />
+            <span className="text-white text-2xl font-bold -ml-1">GlycoScan</span>
           </div>
           
           <nav className="flex space-x-4">
