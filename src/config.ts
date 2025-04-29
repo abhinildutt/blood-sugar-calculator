@@ -2,7 +2,7 @@
 export const config = {
   apiUrl: import.meta.env.PROD 
     ? '/api' // In production, use relative path as both client and server are on same domain
-    : 'http://localhost:8000', // In development, use local server
+    : 'http://localhost:3000/api', // In development, use local server
   isProduction: import.meta.env.PROD
 };
 

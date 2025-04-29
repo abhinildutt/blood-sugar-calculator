@@ -1,3 +1,5 @@
+import { config } from '../config';
+
 interface ImageAnalysisResponse {
   text: string;
   detections: any[];
@@ -78,7 +80,7 @@ export const analyzeImage = async (imageData: string | File): Promise<ImageAnaly
     const optimizedImage = await optimizeImage(base64Data);
     console.log('Optimized image data size:', optimizedImage.length);
 
-    const response = await fetch('http://localhost:3000/api/analyze-image', {
+    const response = await fetch(`${config.apiUrl}/analyze-image`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
