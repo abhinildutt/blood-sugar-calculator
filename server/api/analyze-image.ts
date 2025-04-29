@@ -1,3 +1,4 @@
+// This file should be renamed to analyze-image.ts
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import Cors from 'cors';
