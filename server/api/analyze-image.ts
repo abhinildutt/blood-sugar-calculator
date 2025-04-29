@@ -1,7 +1,7 @@
 // This file should be renamed to analyze-image.ts
-import { VercelRequest, VercelResponse } from '@vercel/node';
-import { ImageAnnotatorClient } from '@google-cloud/vision';
-import Cors from 'cors';
+const { VercelRequest, VercelResponse } = require('@vercel/node');
+const { ImageAnnotatorClient } = require('@google-cloud/vision');
+const Cors = require('cors');
 
 const cors = Cors({
   origin: '*',
@@ -9,7 +9,7 @@ const cors = Cors({
   allowedHeaders: ['Content-Type']
 });
 
-const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) => {
+const runMiddleware = (req: typeof VercelRequest, res: typeof VercelResponse, fn: Function) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
       if (result instanceof Error) {
@@ -20,7 +20,7 @@ const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) =>
   });
 };
 
-let visionClient: ImageAnnotatorClient;
+let visionClient: typeof ImageAnnotatorClient;
 
 try {
   if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
@@ -42,7 +42,7 @@ try {
   // Don't throw here, we'll handle the null client in the handler
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req: typeof VercelRequest, res: typeof VercelResponse) {
   try {
     await runMiddleware(req, res, cors);
 
