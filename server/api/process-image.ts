@@ -1,15 +1,13 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
-import vision from '@google-cloud/vision';
-import cors from 'cors';
+import { ImageAnnotatorClient } from '@google-cloud/vision';
+import Cors from 'cors';
 
-// Initialize CORS middleware
-const corsMiddleware = cors({
-  origin: process.env.CORS_ORIGIN || '*',
-  methods: ['POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type'],
+const cors = Cors({
+  origin: '*',
+  methods: ['POST', 'GET', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
 });
 
-// Helper to wrap CORS middleware
 const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) => {
   return new Promise((resolve, reject) => {
     fn(req, res, (result: any) => {
@@ -21,66 +19,68 @@ const runMiddleware = (req: VercelRequest, res: VercelResponse, fn: Function) =>
   });
 };
 
-// Initialize Vision client
-const client = new vision.ImageAnnotatorClient({
-  keyFilename: process.env.GOOGLE_APPLICATION_CREDENTIALS
-});
+let visionClient: ImageAnnotatorClient;
+
+try {
+  if (process.env.GOOGLE_CLOUD_CREDENTIALS) {
+    // For production environment where credentials are set as environment variable
+    const credentials = JSON.parse(process.env.GOOGLE_CLOUD_CREDENTIALS);
+    visionClient = new ImageAnnotatorClient({
+      credentials: credentials
+    });
+  } else if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    // For local development where credentials file path is set
+    visionClient = new ImageAnnotatorClient();
+  } else {
+    throw new Error('Google Cloud credentials not found');
+  }
+} catch (error) {
+  console.error('Error initializing Vision client:', error);
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Handle CORS
-  await runMiddleware(req, res, corsMiddleware);
-
-  // Only allow POST requests
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
   try {
-    const { image } = req.body;
+    await runMiddleware(req, res, cors);
 
-    if (!image) {
+    if (req.method !== 'POST') {
+      return res.status(405).json({ error: 'Method not allowed' });
+    }
+
+    if (!visionClient) {
+      return res.status(500).json({ error: 'Vision client not initialized' });
+    }
+
+    const { imageData } = req.body;
+
+    if (!imageData) {
       return res.status(400).json({ error: 'No image data provided' });
     }
 
-    // Remove the data:image/jpeg;base64 prefix if present
-    const base64Image = image.replace(/^data:image\/\w+;base64,/, '');
-    
-    // Process the image with Google Cloud Vision
-    const [result] = await client.textDetection({
-      image: {
-        content: base64Image
-      }
+    // Remove data:image/jpeg;base64, prefix if present
+    const base64Image = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Image, 'base64');
+
+    const [result] = await visionClient.textDetection({
+      image: { content: buffer }
     });
 
     const detections = result.textAnnotations;
     
     if (!detections || detections.length === 0) {
-      return res.status(400).json({ error: 'No text detected in image' });
+      return res.status(404).json({ error: 'No text detected in image' });
     }
 
-    // Extract the full text
     const extractedText = detections[0].description;
-
-    // Process the text to extract nutrition information
-    // This is a placeholder - implement your nutrition extraction logic here
-    const nutritionInfo = {
-      calories: 0,
-      protein: 0,
-      carbs: 0,
-      fat: 0,
-      // Add other nutrition fields
-    };
-
+    
+    // Here you would process the extracted text to get nutrition information
+    // For now, returning the raw text
     return res.status(200).json({
-      success: true,
-      data: nutritionInfo,
-      rawText: extractedText
+      text: extractedText,
+      nutrition: {} // Placeholder for nutrition information
     });
+
   } catch (error) {
     console.error('Error processing image:', error);
-    return res.status(500).json({
-      error: 'Failed to process image',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    });
+    return res.status(500).json({ error: 'Failed to process image' });
   }
 } 
