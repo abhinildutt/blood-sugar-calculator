@@ -7,7 +7,7 @@ import BaselineInputModal from '../components/BaselineInputModal';
 import { useScanImage } from '../hooks/useScanImage';
 import { calculateBloodSugarImpact } from '../utils/bloodSugarCalculator';
 import { defaultNutritionData } from '../utils/ocrProcessor';
-import { NutritionData, BloodSugarImpact } from '../types';
+import { NutritionData, BloodSugarImpact, Country } from '../types';
 import { useSession } from '../contexts/SessionContext';
 
 const Home: React.FC = () => {
@@ -62,6 +62,10 @@ const Home: React.FC = () => {
     setManualData(updatedNutrition);
     const impact = calculateBloodSugarImpact(updatedNutrition);
     setManualImpact(impact);
+  };
+
+  const handleImageCaptured = (file: File, country: Country) => {
+    scanImage(file, country);
   };
   
   // Set up manual entry mode
@@ -144,7 +148,7 @@ const Home: React.FC = () => {
               the carbohydrates, fiber, protein, and fat content to estimate blood sugar impact.
             </p>
 
-            <ImageUploader onImageCaptured={scanImage} isLoading={isLoading} />
+            <ImageUploader onImageCaptured={handleImageCaptured} isLoading={isLoading} />
 
             {isLoading && (
               <div className="mt-6 text-center">

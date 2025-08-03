@@ -1,16 +1,41 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import Webcam from 'react-webcam';
+import { Country } from '../types';
 
 interface ImageUploaderProps {
-  onImageCaptured: (file: File) => void;
+  onImageCaptured: (file: File, country: Country) => void;
   isLoading: boolean;
 }
 
 const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoading }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'camera'>('upload');
   const [imageSrc, setImageSrc] = useState<string | null>(null);
+  const [selectedCountry, setSelectedCountry] = useState<Country>('US');
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const webcamRef = useRef<Webcam>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const countryOptions = [
+    { value: 'US' as Country, label: 'United States', flag: '🇺🇸' },
+    { value: 'UK' as Country, label: 'United Kingdom', flag: '🇬🇧' },
+  ];
+
+  const selectedOption = countryOptions.find(option => option.value === selectedCountry);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -20,7 +45,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoadin
       reader.onload = (event) => {
         if (event.target?.result) {
           setImageSrc(event.target.result as string);
-          onImageCaptured(file);
+          onImageCaptured(file, selectedCountry);
         }
       };
       
@@ -44,7 +69,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoadin
       reader.onload = (event) => {
         if (event.target?.result) {
           setImageSrc(event.target.result as string);
-          onImageCaptured(file);
+          onImageCaptured(file, selectedCountry);
         }
       };
       
@@ -63,11 +88,11 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoadin
           .then(res => res.blob())
           .then(blob => {
             const file = new File([blob], "webcam-capture.jpg", { type: "image/jpeg" });
-            onImageCaptured(file);
+            onImageCaptured(file, selectedCountry);
           });
       }
     }
-  }, [webcamRef, onImageCaptured]);
+  }, [webcamRef, onImageCaptured, selectedCountry]);
 
   const triggerFileInput = () => {
     if (fileInputRef.current) {
@@ -81,6 +106,83 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoadin
       fileInputRef.current.value = '';
     }
   };
+
+  const renderCountrySelector = () => (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        Select Country <span className="text-red-500">*</span>
+      </label>
+      <div className="relative" ref={dropdownRef}>
+        <button
+          type="button"
+          onClick={() => !isLoading && setIsDropdownOpen(!isDropdownOpen)}
+          disabled={isLoading}
+          className={`
+            relative w-full bg-white border border-gray-300 rounded-lg shadow-sm pl-3 pr-10 py-2.5 text-left cursor-default
+            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+            hover:border-gray-400 transition-colors duration-200
+            ${isLoading ? 'bg-gray-50 cursor-not-allowed' : 'cursor-pointer'}
+          `}
+        >
+          <span className="flex items-center">
+            <span className="text-lg mr-3">{selectedOption?.flag}</span>
+            <span className="block truncate text-gray-900">{selectedOption?.label}</span>
+          </span>
+          <span className="ml-3 absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+            <svg
+              className={`h-5 w-5 text-gray-400 transform transition-transform duration-200 ${
+                isDropdownOpen ? 'rotate-180' : ''
+              }`}
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                fillRule="evenodd"
+                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                clipRule="evenodd"
+              />
+            </svg>
+          </span>
+        </button>
+
+        {isDropdownOpen && (
+          <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-56 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
+            {countryOptions.map((option) => (
+              <div
+                key={option.value}
+                onClick={() => {
+                  setSelectedCountry(option.value);
+                  setIsDropdownOpen(false);
+                }}
+                className={`
+                  cursor-pointer select-none relative py-2.5 pl-3 pr-9
+                  hover:bg-indigo-50 hover:text-indigo-900 transition-colors duration-150
+                  ${selectedCountry === option.value ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'}
+                `}
+              >
+                <div className="flex items-center">
+                  <span className="text-lg mr-3">{option.flag}</span>
+                  <span className="font-medium block truncate">{option.label}</span>
+                </div>
+                {selectedCountry === option.value && (
+                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-indigo-600">
+                    <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-gray-500">
+        This helps us accurately parse your nutrition label format
+      </p>
+    </div>
+  );
 
   const renderUploadTab = () => (
     <div
@@ -167,6 +269,8 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({ onImageCaptured, isLoadin
 
   return (
     <div className="mt-4">
+      {renderCountrySelector()}
+      
       <div className="border-b border-gray-200">
         <nav className="flex -mb-px" aria-label="Tabs">
           <button

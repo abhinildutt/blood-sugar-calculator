@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { processNutritionLabelWithGoogleVision, OCRProcessingResult, ExtractionDebugInfo } from '../utils/googleVisionProcessor';
 import { calculateBloodSugarImpact } from '../utils/bloodSugarCalculator';
-import { NutritionData, BloodSugarImpact, ScanState } from '../types';
+import { NutritionData, BloodSugarImpact, ScanState, Country } from '../types';
 
 interface ScanResult {
   nutritionData: NutritionData | null;
@@ -11,8 +11,8 @@ interface ScanResult {
 }
 
 interface UseScanImage extends ScanState, ScanResult {
-  scanImage: (file: File) => Promise<void>;
-  scanImageFromUrl: (url: string) => Promise<void>;
+  scanImage: (file: File, country: Country) => Promise<void>;
+  scanImageFromUrl: (url: string, country: Country) => Promise<void>;
   reset: () => void;
 }
 
@@ -39,12 +39,12 @@ export const useScanImage = (): UseScanImage => {
     setBloodSugarImpact(impact);
   }, []);
 
-  const scanImage = useCallback(async (file: File) => {
+  const scanImage = useCallback(async (file: File, country: Country) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await processNutritionLabelWithGoogleVision(file) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(file, country) as OCRProcessingResult;
       setRawOcrText(result.rawText);
       setDebugInfo(result.debugInfo || null);
       processNutrition(result.nutritionData);
@@ -56,12 +56,12 @@ export const useScanImage = (): UseScanImage => {
     }
   }, [processNutrition]);
 
-  const scanImageFromUrl = useCallback(async (url: string) => {
+  const scanImageFromUrl = useCallback(async (url: string, country: Country) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await processNutritionLabelWithGoogleVision(url) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(url, country) as OCRProcessingResult;
       setRawOcrText(result.rawText);
       setDebugInfo(result.debugInfo || null);
       processNutrition(result.nutritionData);

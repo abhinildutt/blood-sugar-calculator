@@ -1,3 +1,6 @@
+// Supported countries for nutrition labels
+export type Country = 'US' | 'UK' | 'EU' | 'CA';
+
 // Nutritional information extracted from food label
 export interface NutritionData {
   totalCarbs: number;
@@ -7,6 +10,7 @@ export interface NutritionData {
   fat: number;
   calories: number;
   servingSize: string;
+  country?: Country; // Country of the nutrition label
 }
 
 // Processed nutrition metrics for blood sugar calculation

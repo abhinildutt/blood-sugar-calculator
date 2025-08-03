@@ -1,5 +1,6 @@
 import { createWorker } from 'tesseract.js';
-import { NutritionData } from '../types';
+import { NutritionData, Country } from '../types';
+import { extractUKNutritionFromText } from './ukLabelParser';
 
 /**
  * Default nutrition data with zero values
@@ -189,9 +190,9 @@ const extractNutritionValue = (lines: string[], keywords: string[]): number | nu
 };
 
 /**
- * Process OCR text to extract nutrition information
+ * Process OCR text to extract nutrition information for US labels
  */
-export const extractNutritionFromText = (text: string): { nutritionData: NutritionData; debugInfo: ExtractionDebugInfo } => {
+const extractUSNutritionFromText = (text: string): { nutritionData: NutritionData; debugInfo: ExtractionDebugInfo } => {
   const nutrition: NutritionData = { ...defaultNutritionData };
   const debugInfo: ExtractionDebugInfo = {
     extractedLines: {},
@@ -202,7 +203,7 @@ export const extractNutritionFromText = (text: string): { nutritionData: Nutriti
   const cleanedText = cleanOCRText(text);
   const lines = cleanedText.split('\n').filter(line => line.trim());
 
-  console.log('Processing lines:', lines);
+  console.log('Processing US label lines:', lines);
   console.log('Full cleaned text:', cleanedText);
 
   // Extract calories with special handling
@@ -258,18 +259,38 @@ export const extractNutritionFromText = (text: string): { nutritionData: Nutriti
     }
   }
 
-  console.log('Extracted nutrition data:', nutrition);
+  console.log('Extracted US nutrition data:', nutrition);
   console.log('Debug info:', debugInfo);
   
   return { nutritionData: nutrition, debugInfo };
 };
 
 /**
+ * Process OCR text to extract nutrition information based on country
+ */
+export const extractNutritionFromText = (text: string, country: Country = 'US'): { nutritionData: NutritionData; debugInfo: ExtractionDebugInfo } => {
+  switch (country) {
+    case 'UK':
+      const ukResult = extractUKNutritionFromText(text);
+      return {
+        nutritionData: ukResult.nutritionData,
+        debugInfo: ukResult.debugInfo
+      };
+    case 'US':
+    case 'EU':
+    case 'CA':
+    default:
+      return extractUSNutritionFromText(text);
+  }
+};
+
+/**
  * Test function to validate the parser with specific OCR text
  */
-export const testParserWithText = (text: string) => {
+export const testParserWithText = (text: string, country: Country = 'US') => {
   console.log('Testing parser with text:', text);
-  const result = extractNutritionFromText(text);
+  console.log('Country:', country);
+  const result = extractNutritionFromText(text, country);
   console.log('Parser result:', result);
   return result;
 };
@@ -277,7 +298,7 @@ export const testParserWithText = (text: string) => {
 /**
  * Process the image with OCR and extract nutrition information
  */
-export const processNutritionLabel = async (imageFile: File | string): Promise<OCRProcessingResult> => {
+export const processNutritionLabel = async (imageFile: File | string, country: Country = 'US'): Promise<OCRProcessingResult> => {
   const worker = await createWorker('eng');
   
   try {
@@ -285,9 +306,10 @@ export const processNutritionLabel = async (imageFile: File | string): Promise<O
     const result = await worker.recognize(imageFile);
     const text = result.data.text;
     console.log('Raw OCR text:', text);
+    console.log('Processing for country:', country);
     
-    // Extract nutrition data from the OCR text
-    const { nutritionData, debugInfo } = extractNutritionFromText(text);
+    // Extract nutrition data from the OCR text based on country
+    const { nutritionData, debugInfo } = extractNutritionFromText(text, country);
     
     return {
       rawText: text,

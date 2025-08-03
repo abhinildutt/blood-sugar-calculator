@@ -1,4 +1,4 @@
-import { NutritionData } from '../types';
+import { NutritionData, Country } from '../types';
 import { extractNutritionFromText } from './ocrProcessor';
 import { analyzeImage } from '../services/api';
 
@@ -20,14 +20,15 @@ export const processImageWithGoogleVision = async (imageFile: File | string): Pr
 /**
  * Process nutrition label using Google Vision API
  */
-export const processNutritionLabelWithGoogleVision = async (imageFile: File | string) => {
+export const processNutritionLabelWithGoogleVision = async (imageFile: File | string, country: Country = 'US') => {
   try {
     // Process the image with Google Vision
     const text = await processImageWithGoogleVision(imageFile);
     console.log('Raw OCR text from Google Vision:', text);
+    console.log('Processing for country:', country);
     
-    // Extract nutrition data from the OCR text using our existing parser
-    const { nutritionData, debugInfo } = extractNutritionFromText(text);
+    // Extract nutrition data from the OCR text using our existing parser with country-specific logic
+    const { nutritionData, debugInfo } = extractNutritionFromText(text, country);
     
     return {
       rawText: text,
