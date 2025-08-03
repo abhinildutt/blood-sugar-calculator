@@ -1,4 +1,5 @@
 import React from 'react';
+import { Line } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,7 +11,6 @@ import {
   Legend,
   Filler
 } from 'chart.js';
-import { Line } from 'react-chartjs-2';
 import { BloodSugarImpact } from '../types';
 
 // Register Chart.js components
@@ -27,38 +27,46 @@ ChartJS.register(
 
 interface BloodSugarChartProps {
   bloodSugarImpact: BloodSugarImpact | null;
+  baseline?: number; // Add baseline parameter
 }
 
-const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact }) => {
+const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact, baseline }) => {
   if (!bloodSugarImpact) {
-    return null;
+    return (
+      <div className="mt-6 bg-white shadow-md rounded-lg p-6">
+        <p className="text-gray-500 text-center">No blood sugar impact data available</p>
+      </div>
+    );
   }
 
-  const { curve, overallImpact } = bloodSugarImpact;
+  const { curve, overallImpact, peakValue, timeToReturn } = bloodSugarImpact;
   
   // Get color based on impact level
   const getImpactColor = (impact: 'Low' | 'Moderate' | 'High') => {
     switch (impact) {
       case 'Low':
-        return 'rgba(46, 184, 92, 0.8)';
+        return 'rgba(34, 197, 94, 0.8)'; // Green
       case 'Moderate':
-        return 'rgba(246, 176, 26, 0.8)';
+        return 'rgba(245, 158, 11, 0.8)'; // Yellow
       case 'High':
-        return 'rgba(220, 53, 69, 0.8)';
+        return 'rgba(239, 68, 68, 0.8)'; // Red
       default:
-        return 'rgba(46, 184, 92, 0.8)';
+        return 'rgba(59, 130, 246, 0.8)'; // Blue
     }
   };
 
   const borderColor = getImpactColor(overallImpact);
   const backgroundColor = borderColor.replace('0.8', '0.2');
 
+  // Calculate absolute values if baseline is provided
   const chartData = {
     labels: curve.map(point => `${point.time} min`),
     datasets: [
       {
-        label: 'Blood Sugar Level',
-        data: curve.map(point => point.value),
+        label: baseline ? 'Blood Sugar Level' : 'Blood Sugar Rise',
+        data: baseline 
+          ? curve.map(point => baseline + point.value) // Absolute values
+          : curve.map(point => point.value), // Relative values
         borderColor: borderColor,
         backgroundColor: backgroundColor,
         borderWidth: 2,
@@ -78,16 +86,24 @@ const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact }) =
       },
       tooltip: {
         callbacks: {
-          label: (context: any) => `Blood Sugar: +${context.raw.toFixed(1)} mg/dL`
+          label: (context: any) => {
+            if (baseline) {
+              return `Blood Sugar: ${context.raw.toFixed(1)} mg/dL`;
+            } else {
+              return `Blood Sugar: +${context.raw.toFixed(1)} mg/dL`;
+            }
+          }
         }
       }
     },
     scales: {
       y: {
-        beginAtZero: true,
+        beginAtZero: baseline ? false : true,
         title: {
           display: true,
-          text: 'Blood Sugar Rise (mg/dL above baseline)'
+          text: baseline 
+            ? 'Blood Sugar Level (mg/dL)' 
+            : 'Blood Sugar Rise (mg/dL above baseline)'
         }
       },
       x: {
@@ -113,12 +129,17 @@ const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact }) =
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="bg-gray-50 p-4 rounded-lg text-center">
           <p className="text-sm text-gray-500">Peak Rise</p>
-          <p className="text-2xl font-bold">{bloodSugarImpact.peakValue.toFixed(1)} mg/dL</p>
+          <p className="text-2xl font-bold">+{peakValue.toFixed(1)} mg/dL</p>
+          {baseline && (
+            <p className="text-sm text-gray-500">
+              Peak: {(baseline + peakValue).toFixed(1)} mg/dL
+            </p>
+          )}
         </div>
         
         <div className="bg-gray-50 p-4 rounded-lg text-center">
           <p className="text-sm text-gray-500">Return to Baseline</p>
-          <p className="text-2xl font-bold">{bloodSugarImpact.timeToReturn.toFixed(0)} min</p>
+          <p className="text-2xl font-bold">{timeToReturn.toFixed(0)} min</p>
         </div>
         
         <div className="bg-gray-50 p-4 rounded-lg text-center">
@@ -129,6 +150,15 @@ const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact }) =
         </div>
       </div>
       
+      {baseline && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-blue-800">
+            <strong>Baseline:</strong> {baseline} mg/dL | 
+            <strong> Estimated Peak:</strong> {(baseline + peakValue).toFixed(1)} mg/dL
+          </p>
+        </div>
+      )}
+      
       <div className="h-64">
         <Line data={chartData} options={chartOptions} />
       </div>
@@ -137,6 +167,9 @@ const BloodSugarChart: React.FC<BloodSugarChartProps> = ({ bloodSugarImpact }) =
         <h3 className="font-medium mb-2">What This Means:</h3>
         <ul className="list-disc pl-5 space-y-1">
           <li>This chart shows how your blood sugar might rise and fall after consuming this food.</li>
+          {baseline && (
+            <li>Your baseline blood sugar level of {baseline} mg/dL is used as the starting point.</li>
+          )}
           <li>Foods with a higher carbohydrate content, especially simple sugars, typically cause a higher peak.</li>
           <li>Protein, fat, and fiber can help slow down the absorption of carbohydrates, resulting in a lower peak.</li>
           <li>These are estimates based on the nutritional content and may vary based on individual factors.</li>
