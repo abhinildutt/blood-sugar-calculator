@@ -47,16 +47,143 @@ const cleanOCRText = (text: string): string => {
 };
 
 /**
- * Extract numeric value from a line of text
+ * Extract numeric value from a line of text with improved pattern matching
  */
 const extractNumericValue = (line: string): number | null => {
-  // Remove percentage values
-  const withoutPercentage = line.replace(/\d+%/, '');
+  // Remove percentage values first
+  const withoutPercentage = line.replace(/\d+%/g, '');
   
-  // Find numbers, including decimals
-  const match = withoutPercentage.match(/(\d+\.?\d*)/);
-  if (match) {
-    return parseFloat(match[1]);
+  // Look for patterns like "calories 90" or "protein 5g" or "fat 2.5g"
+  // This handles cases where the value is at the end of the line
+  const patterns = [
+    /(\d+\.?\d*)\s*g\s*$/i,  // Number followed by 'g' at end of line
+    /(\d+\.?\d*)\s*mg\s*$/i, // Number followed by 'mg' at end of line
+    /(\d+\.?\d*)\s*$/i,      // Just a number at end of line
+    /(\d+\.?\d*)\s*g/i,      // Number followed by 'g' anywhere
+    /(\d+\.?\d*)\s*mg/i,     // Number followed by 'mg' anywhere
+    /(\d+\.?\d*)/i           // Any number
+  ];
+  
+  for (const pattern of patterns) {
+    const match = withoutPercentage.match(pattern);
+    if (match) {
+      const value = parseFloat(match[1]);
+      // Validate the value is reasonable for nutrition data
+      if (value >= 0 && value <= 10000) {
+        return value;
+      }
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Extract calories with special handling for nutrition label layout
+ */
+const extractCalories = (lines: string[]): number | null => {
+  // Join all lines into one string for better pattern matching
+  const fullText = lines.join(' ');
+  
+  // Look for calories patterns in the full text
+  const caloriesPatterns = [
+    /calories.*?(\d+)(?=\s*% daily value)/i,  // Value before % Daily Value (most reliable)
+    /calories.*?(\d+)(?=\s*%dv)/i,            // Value before %DV
+    /calories.*?(\d+)(?=\s*% daily value)/i,  // Value before %Daily Value
+    /calories.*?(\d+)(?=\s*%dailyvalue)/i,    // Value before %DailyValue
+    /calories.*?(\d+)(?=\s*% dv)/i,           // Value before % DV
+    /calories\s+(\d+)/i,                      // Value right after calories
+    /(\d+)\s+calories/i                       // Number followed by calories
+  ];
+  
+  for (const pattern of caloriesPatterns) {
+    const match = fullText.match(pattern);
+    if (match) {
+      const value = parseInt(match[1]);
+      if (value >= 0 && value <= 10000) {
+        return value;
+      }
+    }
+  }
+  
+  // Fallback: look for calories in individual lines
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    
+    // Look for "calories" in the line
+    if (line.includes('calories') && !line.includes('fat')) {
+      // First try to find the value in the same line
+      const value = extractNumericValue(line);
+      if (value !== null) {
+        return value;
+      }
+      
+      // If not found in same line, check the next line
+      if (i + 1 < lines.length) {
+        const nextLine = lines[i + 1];
+        const nextValue = extractNumericValue(nextLine);
+        if (nextValue !== null) {
+          return nextValue;
+        }
+      }
+      
+      // Check the previous line
+      if (i > 0) {
+        const prevLine = lines[i - 1];
+        const prevValue = extractNumericValue(prevLine);
+        if (prevValue !== null) {
+          return prevValue;
+        }
+      }
+    }
+  }
+  
+  return null;
+};
+
+/**
+ * Extract nutrition value with improved pattern matching
+ */
+const extractNutritionValue = (lines: string[], keywords: string[]): number | null => {
+  // Join all lines into one string for better pattern matching
+  const fullText = lines.join(' ');
+  
+  for (const keyword of keywords) {
+    // Look for patterns like "keyword 25g" or "25g keyword"
+    const patterns = [
+      new RegExp(`${keyword}.*?(\\d+\\.?\\d*)\\s*g(?=\\s|$)`, 'i'),  // keyword ... number g
+      new RegExp(`${keyword}\\s+(\\d+\\.?\\d*)\\s*g`, 'i'),        // keyword number g
+      new RegExp(`(\\d+\\.?\\d*)\\s*g\\s+${keyword}`, 'i'),        // number g keyword
+      new RegExp(`${keyword}.*?(\\d+\\.?\\d*)(?=\\s*%|\\s*$|\\s*g)`, 'i'),  // keyword ... number (before % or end)
+      new RegExp(`${keyword}.*?o\\s*g`, 'i')  // keyword ... Og (OCR misreading of 0g)
+    ];
+    
+    for (const pattern of patterns) {
+      const match = fullText.match(pattern);
+      if (match) {
+        // Special case for "Og" (OCR misreading of 0g)
+        if (pattern.toString().includes('o\\s*g')) {
+          return 0;
+        }
+        
+        const value = parseFloat(match[1]);
+        if (value >= 0 && value <= 10000) {
+          return value;
+        }
+      }
+    }
+  }
+  
+  // Fallback: look in individual lines
+  for (const line of lines) {
+    for (const keyword of keywords) {
+      if (line.includes(keyword)) {
+        const value = extractNumericValue(line);
+        if (value !== null) {
+          return value;
+        }
+      }
+    }
   }
   return null;
 };
@@ -73,68 +200,55 @@ export const extractNutritionFromText = (text: string): { nutritionData: Nutriti
 
   // Clean and normalize the text
   const cleanedText = cleanOCRText(text);
-  const lines = cleanedText.split('\n');
+  const lines = cleanedText.split('\n').filter(line => line.trim());
 
-  // Process each line
+  console.log('Processing lines:', lines);
+  console.log('Full cleaned text:', cleanedText);
+
+  // Extract calories with special handling
+  const calories = extractCalories(lines);
+  if (calories !== null) {
+    nutrition.calories = calories;
+    debugInfo.extractedLines!.calories = `Found calories: ${calories}`;
+  }
+
+  // Extract total carbohydrates
+  const totalCarbs = extractNutritionValue(lines, ['total carbohydrate', 'carbohydrate total', 'total carbs']);
+  if (totalCarbs !== null) {
+    nutrition.totalCarbs = totalCarbs;
+    debugInfo.extractedLines!.totalCarbs = `Found total carbs: ${totalCarbs}`;
+  }
+
+  // Extract sugars
+  const sugars = extractNutritionValue(lines, ['sugars', 'sugar']);
+  if (sugars !== null) {
+    nutrition.sugars = sugars;
+    debugInfo.extractedLines!.sugars = `Found sugars: ${sugars}`;
+  }
+
+  // Extract fiber
+  const fiber = extractNutritionValue(lines, ['fiber', 'fibre', 'dietary fiber']);
+  if (fiber !== null) {
+    nutrition.fiber = fiber;
+    debugInfo.extractedLines!.fiber = `Found fiber: ${fiber}`;
+  }
+
+  // Extract protein
+  const protein = extractNutritionValue(lines, ['protein']);
+  if (protein !== null) {
+    nutrition.protein = protein;
+    debugInfo.extractedLines!.protein = `Found protein: ${protein}`;
+  }
+
+  // Extract total fat
+  const fat = extractNutritionValue(lines, ['total fat', 'fat total']);
+  if (fat !== null) {
+    nutrition.fat = fat;
+    debugInfo.extractedLines!.fat = `Found fat: ${fat}`;
+  }
+
+  // Extract serving size
   for (const line of lines) {
-    // Skip empty lines and daily value percentages
-    if (!line.trim() || line.includes('daily value')) continue;
-
-    // Extract calories
-    if (line.includes('calories') && !line.includes('fat')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.calories = value;
-        debugInfo.extractedLines!.calories = line;
-      }
-    }
-
-    // Extract total carbohydrates
-    if (line.includes('total carbohydrate') || line.includes('carbohydrate total')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.totalCarbs = value;
-        debugInfo.extractedLines!.totalCarbs = line;
-      }
-    }
-
-    // Extract sugars
-    if (line.includes('sugars') && !line.includes('added')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.sugars = value;
-        debugInfo.extractedLines!.sugars = line;
-      }
-    }
-
-    // Extract fiber
-    if (line.includes('fiber') || line.includes('fibre')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.fiber = value;
-        debugInfo.extractedLines!.fiber = line;
-      }
-    }
-
-    // Extract protein
-    if (line.includes('protein')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.protein = value;
-        debugInfo.extractedLines!.protein = line;
-      }
-    }
-
-    // Extract total fat
-    if (line.includes('total fat')) {
-      const value = extractNumericValue(line);
-      if (value !== null) {
-        nutrition.fat = value;
-        debugInfo.extractedLines!.fat = line;
-      }
-    }
-
-    // Extract serving size
     if (line.includes('serving size')) {
       const servingSize = line.replace(/serving size[:\s]*/i, '').trim();
       if (servingSize) {
@@ -148,6 +262,16 @@ export const extractNutritionFromText = (text: string): { nutritionData: Nutriti
   console.log('Debug info:', debugInfo);
   
   return { nutritionData: nutrition, debugInfo };
+};
+
+/**
+ * Test function to validate the parser with specific OCR text
+ */
+export const testParserWithText = (text: string) => {
+  console.log('Testing parser with text:', text);
+  const result = extractNutritionFromText(text);
+  console.log('Parser result:', result);
+  return result;
 };
 
 /**
