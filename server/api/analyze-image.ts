@@ -2,7 +2,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import Cors from 'cors';
-import { extractNutritionWithLLM, extractNutritionFallback } from '../src/llmNutritionExtractor';
+import { extractNutritionWithLLM, extractNutritionFallback } from '../src/llmNutritionExtractor.js';
 
 const cors = Cors({
   origin: '*',
