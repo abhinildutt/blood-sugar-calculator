@@ -2,6 +2,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import Cors from 'cors';
+import { extractNutritionWithLLM, extractNutritionFallback } from '../src/llmNutritionExtractor';
 
 const cors = Cors({
   origin: '*',
@@ -55,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'Vision client not initialized', details: 'Check server logs for more information' });
     }
 
-    const { imageData } = req.body;
+    const { imageData, country = 'US' } = req.body;
 
     if (!imageData) {
       return res.status(400).json({ error: 'No image data provided' });
@@ -76,11 +77,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(404).json({ error: 'No text detected in image' });
       }
 
-      const extractedText = detections[0].description;
+      const extractedText = detections[0].description || '';
+      console.log('Extracted OCR text:', extractedText);
+      
+      // Use LLM to extract nutrition information
+      let nutritionData;
+      let extractionMethod = 'llm';
+      let confidence = 0.9;
+      let reasoning = '';
+      
+      try {
+        const llmResult = await extractNutritionWithLLM(extractedText, country);
+        nutritionData = llmResult.nutritionData;
+        confidence = llmResult.confidence;
+        reasoning = llmResult.reasoning;
+        console.log('Successfully extracted nutrition data using LLM:', nutritionData);
+      } catch (llmError) {
+        console.warn('LLM extraction failed, falling back to manual parsing:', llmError);
+        nutritionData = extractNutritionFallback(extractedText, country);
+        extractionMethod = 'fallback';
+        confidence = 0.5;
+        reasoning = 'LLM extraction failed, used fallback parsing';
+      }
       
       return res.status(200).json({
         text: extractedText,
-        nutrition: {} // Placeholder for nutrition information
+        nutrition: nutritionData,
+        extractionMethod,
+        confidence,
+        reasoning,
+        country
       });
     } catch (visionError: any) {
       console.error('Vision API error:', visionError);

@@ -8,13 +8,18 @@
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "dist",
     "declaration": true,
     "sourceMap": true
   },
-  "include": ["api/**/*.ts", "src/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.js",
+    "api/**/*.ts",
+    "api/**/*.js"
+  ],
+  "exclude": ["node_modules", "dist"]
 } 

@@ -13,6 +13,14 @@ export interface NutritionData {
   country?: Country; // Country of the nutrition label
 }
 
+// LLM extraction result information
+export interface LLMExtractionInfo {
+  extractionMethod: 'llm' | 'fallback';
+  confidence: number;
+  reasoning: string;
+  country: string;
+}
+
 // Processed nutrition metrics for blood sugar calculation
 export interface NutrientMetrics {
   netCarbs: number;

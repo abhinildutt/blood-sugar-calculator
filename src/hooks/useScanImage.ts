@@ -1,18 +1,16 @@
 import { useState, useCallback } from 'react';
-import { processNutritionLabelWithGoogleVision, OCRProcessingResult, ExtractionDebugInfo } from '../utils/googleVisionProcessor';
+import { NutritionData, BloodSugarImpact, Country, LLMExtractionInfo } from '../types';
+import { processNutritionLabelWithGoogleVision } from '../utils/googleVisionProcessor';
 import { calculateBloodSugarImpact } from '../utils/bloodSugarCalculator';
-import { NutritionData, BloodSugarImpact, ScanState, Country } from '../types';
 
 interface ScanResult {
   nutritionData: NutritionData | null;
   bloodSugarImpact: BloodSugarImpact | null;
   rawOcrText: string | null;
-  debugInfo: ExtractionDebugInfo | null;
+  debugInfo: LLMExtractionInfo | null;
 }
 
 interface UseScanImage extends ScanState, ScanResult {
-  scanImage: (file: File, country: Country) => Promise<void>;
-  scanImageFromUrl: (url: string, country: Country) => Promise<void>;
   reset: () => void;
 }
 
@@ -22,7 +20,7 @@ export const useScanImage = (): UseScanImage => {
   const [nutritionData, setNutritionData] = useState<NutritionData | null>(null);
   const [bloodSugarImpact, setBloodSugarImpact] = useState<BloodSugarImpact | null>(null);
   const [rawOcrText, setRawOcrText] = useState<string | null>(null);
-  const [debugInfo, setDebugInfo] = useState<ExtractionDebugInfo | null>(null);
+  const [debugInfo, setDebugInfo] = useState<LLMExtractionInfo | null>(null);
 
   const reset = useCallback(() => {
     setIsLoading(false);
@@ -44,9 +42,9 @@ export const useScanImage = (): UseScanImage => {
     setError(null);
     
     try {
-      const result = await processNutritionLabelWithGoogleVision(file, country) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(file, country);
       setRawOcrText(result.rawText);
-      setDebugInfo(result.debugInfo || null);
+      setDebugInfo(result.debugInfo);
       processNutrition(result.nutritionData);
     } catch (err) {
       console.error('Error processing image:', err);
@@ -56,18 +54,18 @@ export const useScanImage = (): UseScanImage => {
     }
   }, [processNutrition]);
 
-  const scanImageFromUrl = useCallback(async (url: string, country: Country) => {
+  const scanImageFromUrl = useCallback(async (imageUrl: string, country: Country) => {
     setIsLoading(true);
     setError(null);
     
     try {
-      const result = await processNutritionLabelWithGoogleVision(url, country) as OCRProcessingResult;
+      const result = await processNutritionLabelWithGoogleVision(imageUrl, country);
       setRawOcrText(result.rawText);
-      setDebugInfo(result.debugInfo || null);
+      setDebugInfo(result.debugInfo);
       processNutrition(result.nutritionData);
     } catch (err) {
-      console.error('Error processing image URL:', err);
-      setError('Failed to process the image. Please try again with a different image.');
+      console.error('Error processing image from URL:', err);
+      setError('Failed to process the image from URL. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -80,8 +78,8 @@ export const useScanImage = (): UseScanImage => {
     bloodSugarImpact,
     rawOcrText,
     debugInfo,
+    reset,
     scanImage,
-    scanImageFromUrl,
-    reset
+    scanImageFromUrl
   };
 }; 

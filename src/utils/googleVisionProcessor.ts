@@ -1,5 +1,4 @@
 import { NutritionData, Country } from '../types';
-import { extractNutritionFromText } from './ocrProcessor';
 import { analyzeImage } from '../services/api';
 
 /**
@@ -18,22 +17,26 @@ export const processImageWithGoogleVision = async (imageFile: File | string): Pr
 };
 
 /**
- * Process nutrition label using Google Vision API
+ * Process nutrition label using Google Vision API with LLM extraction
  */
-export const processNutritionLabelWithGoogleVision = async (imageFile: File | string, country: Country = 'US') => {
+export const processNutritionLabelWithGoogleVision = async (
+  imageFile: File | string, 
+  country: Country = 'US'
+) => {
   try {
-    // Process the image with Google Vision
-    const text = await processImageWithGoogleVision(imageFile);
-    console.log('Raw OCR text from Google Vision:', text);
-    console.log('Processing for country:', country);
-    
-    // Extract nutrition data from the OCR text using our existing parser with country-specific logic
-    const { nutritionData, debugInfo } = extractNutritionFromText(text, country);
+    // Process the image with Google Vision and LLM extraction
+    const result = await analyzeImage(imageFile, country);
+    console.log('LLM extraction result:', result);
     
     return {
-      rawText: text,
-      nutritionData,
-      debugInfo
+      rawText: result.text,
+      nutritionData: result.nutrition,
+      debugInfo: {
+        extractionMethod: result.extractionMethod,
+        confidence: result.confidence,
+        reasoning: result.reasoning,
+        country: result.country
+      }
     };
   } catch (error) {
     console.error('Error in nutrition label processing:', error);

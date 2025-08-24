@@ -1,8 +1,13 @@
 import { config } from '../config';
+import { NutritionData } from '../types';
 
 interface ImageAnalysisResponse {
   text: string;
-  detections: any[];
+  nutrition: NutritionData;
+  extractionMethod: 'llm' | 'fallback';
+  confidence: number;
+  reasoning: string;
+  country: string;
 }
 
 interface ErrorResponse {
@@ -56,7 +61,7 @@ const optimizeImage = async (imageData: string): Promise<string> => {
   });
 };
 
-export const analyzeImage = async (imageData: string | File): Promise<ImageAnalysisResponse> => {
+export const analyzeImage = async (imageData: string | File, country: string = 'US'): Promise<ImageAnalysisResponse> => {
   try {
     let base64Data: string;
     
@@ -85,7 +90,10 @@ export const analyzeImage = async (imageData: string | File): Promise<ImageAnaly
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ imageData: optimizedImage }),
+      body: JSON.stringify({ 
+        imageData: optimizedImage,
+        country 
+      }),
     });
 
     const responseData = await response.json();
